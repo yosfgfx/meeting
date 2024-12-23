@@ -1,1 +1,78 @@
-
+/* ================================
+   تعريف خطوط SST Arabic
+================================ */
+@font-face {
+    font-family: 'SSTArabicRoman';
+    src: url('SSTArabic-Roman.woff2') format('woff2');
+    font-weight: normal;
+    font-style: normal;
+  }
+  
+  @font-face {
+    font-family: 'SSTArabicBold';
+    src: url('SSTArabic-Bold.woff2') format('woff2');
+    font-weight: bold;
+    font-style: normal;
+  }
+  
+  /* ================================
+     الخلفية المتدرجة للشاشات > 900px
+  ================================ */
+  @media (min-width: 900px) {
+    body {
+      background: linear-gradient(to right, #0a7951, #2b435a);
+      background-repeat: no-repeat;
+      background-attachment: fixed;
+      background-position: center;
+      background-size: cover;
+    }
+  }
+  
+  /* ================================
+     حاوية أساسية لا يزيد عرضها عن 900 بكسل
+  ================================ */
+  #pageContainer {
+    max-width: 900px;
+    margin: 0 auto;
+    background-color: #ffffff;
+  }
+  
+  /* ألوان أساسية */
+  .bg-primaryGreen {
+    background-color: #0a7951 !important;
+  }
+  
+  .text-primaryGreen {
+    color: #0a7951 !important;
+  }
+  
+  .bg-darkBlue {
+    background-color: #2b435a !important;
+  }
+  
+  .text-darkBlue {
+    color: #2b435a !important;
+  }
+  
+  .bg-lightGray {
+    background-color: #f2f5f7 !important;
+  }
+  
+  .bg-darkGray {
+    background-color: #e7eaf1 !important;
+  }
+  
+  /* أزرار عامة */
+  button {
+    font-family: 'SSTArabicBold', sans-serif;
+    transition: all 0.3s ease;
+  }
+  
+  button:hover {
+    transform: translateY(-2px);
+  }
+  
+  /* إخفاء عناصر */
+  .hidden {
+    display: none !important;
+  }
