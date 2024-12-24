@@ -1,4 +1,258 @@
 /***************************************************
+ * تكوين Firebase
+ ***************************************************/
+
+// استخدم معلومات مشروعك على Firebase
+var firebaseConfig = {
+  apiKey: "AIzaSyDleVfi3Z9BO5Apxe8_TOzG4FkiQ2giBn8",
+  authDomain: "yosfgfx-meetroom.firebaseapp.com",
+  databaseURL: "https://yosfgfx-meetroom-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "yosfgfx-meetroom",
+  storageBucket: "yosfgfx-meetroom.firebasestorage.app",
+  messagingSenderId: "605591505888",
+  appId: "1:605591505888:web:74a259ca22cd2ce3aeb985",
+  measurementId: "G-ZK83SMYP9M"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+var database = firebase.database();
+
+/***************************************************
+ * عناصر الصفحة في index.html
+ ***************************************************/
+const coordinatorSection = document.getElementById("coordinatorSection");
+const bookingSection = document.getElementById("bookingSection");
+const bookingDetailsSection = document.getElementById("bookingDetailsSection");
+
+const coordinatorForm = document.getElementById("coordinatorForm");
+const bookingForm = document.getElementById("bookingForm");
+
+const nextToBookingBtn = document.getElementById("nextToBookingBtn");
+const checkAvailabilityBtn = document.getElementById("checkAvailabilityBtn");
+const nextToDetailsBtn = document.getElementById("nextToDetailsBtn");
+const confirmBookingBtn = document.getElementById("confirmBookingBtn");
+
+const bookingDateInput = document.getElementById("bookingDate");
+const meetingDurationSelect = document.getElementById("meetingDuration");
+const meetingStartSelect = document.getElementById("meetingStart");
+const availableTimesMessage = document.getElementById("availableTimesMessage");
+
+const displayBookingDate = document.getElementById("displayBookingDate");
+const displayBookingDuration = document.getElementById("displayBookingDuration");
+const displayStartTime = document.getElementById("displayStartTime");
+const displayEndTime = document.getElementById("displayEndTime");
+
+/***************************************************
+ * الأحداث - التنقل بين الأقسام مع مؤثرات
+ ***************************************************/
+if (nextToBookingBtn) {
+  nextToBookingBtn.addEventListener("click", function () {
+    if (coordinatorForm.checkValidity()) {
+      // إخفاء الأول
+      coordinatorSection.classList.add("hidden");
+      // إظهار الثاني
+      bookingSection.classList.remove("hidden");
+    } else {
+      coordinatorForm.reportValidity();
+    }
+  });
+}
+
+if (checkAvailabilityBtn) {
+  checkAvailabilityBtn.addEventListener("click", function () {
+    const bookingDate = bookingDateInput.value;
+    const meetingDuration = parseInt(meetingDurationSelect.value || "0");
+    const meetingStart = meetingStartSelect.value;
+
+    if (!bookingDate || !meetingDuration || !meetingStart) {
+      alert("يرجى اختيار تاريخ ومدة ووقت بدء الاجتماع!");
+      return;
+    }
+
+    database
+      .ref("reservations/" + bookingDate)
+      .once("value")
+      .then((snapshot) => {
+        let conflicts = false;
+        snapshot.forEach((childSnap) => {
+          let res = childSnap.val();
+
+          const toMinutes = (timeStr) => {
+            const [hh, mm] = timeStr.split(":");
+            return parseInt(hh) * 60 + parseInt(mm);
+          };
+          const selectedStart = toMinutes(meetingStart);
+          const selectedEnd = selectedStart + meetingDuration * 60;
+
+          const reservedStart = toMinutes(res.startTime);
+          const reservedEnd = toMinutes(res.endTime);
+
+          if (selectedStart < reservedEnd && selectedEnd > reservedStart) {
+            conflicts = true;
+          }
+        });
+
+        if (conflicts) {
+          availableTimesMessage.classList.remove("hidden");
+          availableTimesMessage.classList.remove("text-success");
+          availableTimesMessage.classList.add("text-danger");
+          availableTimesMessage.textContent = "عذراً، الوقت المختار غير متاح!";
+          nextToDetailsBtn.classList.add("hidden");
+        } else {
+          availableTimesMessage.classList.remove("hidden");
+          availableTimesMessage.classList.remove("text-danger");
+          availableTimesMessage.classList.add("text-success");
+          availableTimesMessage.textContent = "الوقت المختار متاح!";
+          nextToDetailsBtn.classList.remove("hidden");
+        }
+      })
+      .catch((err) => {
+        console.error("Error fetching reservations: ", err);
+      });
+  });
+}
+
+if (nextToDetailsBtn) {
+  nextToDetailsBtn.addEventListener("click", function () {
+    if (bookingForm.checkValidity()) {
+      bookingSection.classList.add("hidden");
+      bookingDetailsSection.classList.remove("hidden");
+
+      // تعبئة البيانات في قسم التفاصيل
+      const bookingDate = bookingDateInput.value;
+      const meetingDuration = meetingDurationSelect.value;
+      const meetingStart = meetingStartSelect.value;
+
+      displayBookingDate.textContent = bookingDate;
+      displayBookingDuration.textContent = meetingDuration;
+      displayStartTime.textContent = meetingStart;
+
+      // احسب نهاية الاجتماع
+      const toMinutes = (timeStr) => {
+        const [hh, mm] = timeStr.split(":");
+        return parseInt(hh) * 60 + parseInt(mm);
+      };
+      const toHHMM = (minutes) => {
+        let h = Math.floor(minutes / 60);
+        let m = minutes % 60;
+        if (h < 10) h = "0" + h;
+        if (m < 10) m = "0" + m;
+        return `${h}:${m}`;
+      };
+
+      const startInMinutes = toMinutes(meetingStart);
+      const endInMinutes = startInMinutes + parseInt(meetingDuration) * 60;
+      const endTimeStr = toHHMM(endInMinutes);
+
+      displayEndTime.textContent = endTimeStr;
+    } else {
+      bookingForm.reportValidity();
+    }
+  });
+}
+
+if (confirmBookingBtn) {
+  confirmBookingBtn.addEventListener("click", function () {
+    const coordinatorName = document.getElementById("coordinatorName").value;
+    const coordinatorPhone = document.getElementById("coordinatorPhone").value;
+    const coordinatorId = document.getElementById("coordinatorId").value;
+    const coordinatorEmail = document.getElementById("coordinatorEmail").value;
+
+    const departmentName = document.getElementById("departmentName").value;
+    const bookingDate = bookingDateInput.value;
+    const meetingDuration = parseInt(meetingDurationSelect.value);
+    const meetingStart = meetingStartSelect.value;
+
+    // حساب وقت النهاية
+    const toMinutes = (timeStr) => {
+      const [hh, mm] = timeStr.split(":");
+      return parseInt(hh) * 60 + parseInt(mm);
+    };
+    const toHHMM = (minutes) => {
+      let h = Math.floor(minutes / 60);
+      let m = minutes % 60;
+      if (h < 10) h = "0" + h;
+      if (m < 10) m = "0" + m;
+      return `${h}:${m}`;
+    };
+    const startInMinutes = toMinutes(meetingStart);
+    const endInMinutes = startInMinutes + meetingDuration * 60;
+    const endTimeStr = toHHMM(endInMinutes);
+
+    // حفظ البيانات
+    const newResRef = database.ref("reservations/" + bookingDate).push();
+    const reservationData = {
+      coordinatorName: coordinatorName,
+      coordinatorPhone: coordinatorPhone,
+      coordinatorId: coordinatorId,
+      coordinatorEmail: coordinatorEmail,
+      departmentName: departmentName,
+      bookingDate: bookingDate,
+      startTime: meetingStart,
+      endTime: endTimeStr,
+      duration: meetingDuration,
+      status: "معلق"
+    };
+
+    newResRef
+      .set(reservationData)
+      .then(() => {
+        alert("تم إرسال الحجز بنجاح بانتظار اعتماد المسؤول.");
+        window.location.reload();
+      })
+      .catch((err) => {
+        console.error("Error saving reservation: ", err);
+      });
+  });
+}
+
+/***************************************************
+ * صفحة المسؤول (admin.html)
+ ***************************************************/
+var reservationsTableBody = document.getElementById("reservationsTableBody");
+
+if (reservationsTableBody) {
+  database.ref("reservations").on("value", (snapshot) => {
+    reservationsTableBody.innerHTML = "";
+    snapshot.forEach((dateSnap) => {
+      dateSnap.forEach((resSnap) => {
+        let resData = resSnap.val();
+        let tr = document.createElement("tr");
+
+        tr.innerHTML = `
+          <td>${resData.coordinatorName}</td>
+          <td>${resData.coordinatorPhone}</td>
+          <td>${resData.coordinatorEmail}</td>
+          <td>${resData.departmentName}</td>
+          <td>${resData.bookingDate}</td>
+          <td>${resData.startTime}</td>
+          <td>${resData.endTime}</td>
+          <td>${resData.status || "معلق"}</td>
+          <td>
+            <button class="btn btn-success btn-approve">موافقة</button>
+            <button class="btn btn-danger btn-reject">رفض</button>
+          </td>
+        `;
+
+        // الموافقة
+        let approveBtn = tr.querySelector(".btn-approve");
+        approveBtn.addEventListener("click", () => {
+          dateSnap.ref.child(resSnap.key).update({ status: "مقبول" });
+        });
+
+        // الرفض
+        let rejectBtn = tr.querySelector(".btn-reject");
+        rejectBtn.addEventListener("click", () => {
+          dateSnap.ref.child(resSnap.key).update({ status: "مرفوض" });
+        });
+
+        reservationsTableBody.appendChild(tr);
+      });
+    });
+  });
+}
+/***************************************************
  * صفحة المسؤول (admin.html) - تعديلات
  ***************************************************/
 
@@ -288,3 +542,4 @@ if (saveEditBtn) {
       });
   });
 }
+
